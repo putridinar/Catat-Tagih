@@ -1,0 +1,329 @@
+---
+layout: default
+title: Catat Hutang
+permalink: /catat
+---
+
+<!-- Tambahkan di <head> -->
+<style>
+  .modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center;
+  }
+  .modal-box {
+    background: #fff; padding: 20px; border-radius: 8px; width: 300px;
+  }
+  .hutang-item { background: rgba(0, 0, 0, 0.5); color: white; border-radius: 10px; border: 1px solid #ccc; padding: 10px; margin: 10px 0;
+  }
+</style>
+
+<!-- HTML konten -->
+<div class="app-container">
+  <h2 style="margin: 0 0 10px;">Catatan Hutang</h2>
+  <p style="margin: 0 0 0px;">Total Hutang: <span id="totalHutang">Rp 0</span></p>
+  <p style="margin: 0 0 20px;">Total Pemasukan: <span id="totalPemasukan">Rp 0</span></p>
+
+  <h3>Daftar Hutang</h3>
+  <div class="tabs">
+  <button class="tab-btn active" onclick="gantiTab('belum')">Belum Lunas</button>
+  <button class="tab-btn" onclick="gantiTab('lunas')">Lunas</button>
+</div>
+
+	<div id="daftarHutang" class="hutang-list"></div>
+</div>
+
+<!-- Modal -->
+<div id="hutangModal" style="display: none;" class="modal-overlay">
+  <div class="modal-box">
+    <h3 id="modalTitle">Tambah Hutang</h3>
+    <input type="text" id="nama" placeholder="Nama" />
+    <input type="number" id="jumlah" placeholder="Jumlah (Rp)" />
+    <input type="date" id="tanggalPinjam" />
+    <input type="date" id="jatuhTempo" />
+    <input type="text" id="status" style="display:none"/>
+	  <div class="btn-grup">
+		<button onclick="simpanHutang()">Simpan</button>
+		<button onclick="tutupModal()">Batal</button>
+	  </div>
+  </div>
+</div>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+<script>
+const firebaseConfig = {
+    apiKey: "AIzaSyD6Y0iIlreVexPRzyL1us_FFktJBlDyT_o",
+    authDomain: "catat-tagih.firebaseapp.com",
+    projectId: "catat-tagih",
+    storageBucket: "catat-tagih.firebasestorage.app",
+    messagingSenderId: "581930587717",
+    appId: "1:581930587717:web:cb26d2d4a355f39624b52c",
+    measurementId: "G-HB5WZ2LJEW"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const auth = firebase.auth();
+
+let editId = null;
+let currentTab = 'belum';
+
+
+// Modal functions
+function bukaModal(data = null) {
+  const modal = document.getElementById("hutangModal");
+  modal.style.display = "flex";
+  document.getElementById("modalTitle").innerText = data ? "Edit Hutang" : "Tambah Hutang";
+  const box = modal.querySelector(".modal-box");
+  box.classList.remove('fade-out');
+  box.classList.add('fade-in');
+
+  if (data) {
+    editId = data.id;
+    document.getElementById("nama").value = data.nama;
+    document.getElementById("jumlah").value = data.jumlah;
+    document.getElementById("tanggalPinjam").value = data.tanggalPinjam;
+    document.getElementById("jatuhTempo").value = data.jatuhTempo;
+    document.getElementById("status").value = "belum lunas";
+  } else {
+    editId = null;
+    document.getElementById("nama").value = "";
+    document.getElementById("jumlah").value = "";
+    document.getElementById("tanggalPinjam").value = "";
+    document.getElementById("jatuhTempo").value = "";
+    document.getElementById("status").value = "belum lunas";
+  }
+}
+
+function tutupModal() {
+  const modal = document.getElementById("hutangModal");
+  const box = modal.querySelector(".modal-box");
+  box.classList.remove('fade-in');
+  box.classList.add('fade-out');
+  setTimeout(() => {
+    modal.style.display = "none";
+  }, 200);
+}
+
+// Simpan data
+async function simpanHutang() {
+  const nama = document.getElementById("nama").value.trim();
+  const jumlah = parseInt(document.getElementById("jumlah").value);
+  const tanggalPinjam = document.getElementById("tanggalPinjam").value;
+  const jatuhTempo = document.getElementById("jatuhTempo").value;
+  const status = document.getElementById("status").value;
+
+  const user = auth.currentUser;
+  if (!user) return showAlert("Pengguna belum login");
+
+  if (!nama || isNaN(jumlah) || !tanggalPinjam || !jatuhTempo) {
+    return showAlert("Isi semua kolom dengan benar.");
+  }
+
+  try {
+    if (editId) {
+      await db.collection("hutang").doc(editId).update({
+        nama, jumlah, tanggalPinjam, jatuhTempo, status
+      });
+    } else {
+      await db.collection("hutang").add({
+        uid: user.uid,
+        nama,
+        jumlah,
+        tanggalPinjam,
+        jatuhTempo,
+        status: "belum lunas"
+      });
+    }
+
+    tampilkanHutang();
+	
+    tutupModal();
+    console.log("Sukses simpan hutang");
+    showAlert("Catatan Tersimpan di Database.");
+  } catch (e) {
+    console.error("Gagal simpan hutang", e);
+    showAlert("Terjadi kesalahan.");
+  }
+}
+
+// Tampilkan daftar
+async function tampilkanHutang(statusFilter = 'belum') {
+  const container = document.getElementById('daftarHutang');
+  container.innerHTML = '';
+  currentTab = statusFilter;
+
+  const user = auth.currentUser;
+  if (!user) return;
+
+  showSpinner();
+  try {
+    const snapshot = await db.collection('hutang')
+      .where('uid', '==', user.uid)
+      .where('status', '==', statusFilter === 'belum' ? 'belum lunas' : 'lunas')
+      .orderBy('jatuhTempo')
+      .get();
+
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      const div = document.createElement('div');
+      div.className = 'hutang-item';
+
+      const editData = {
+        id: doc.id,
+        nama: data.nama,
+        jumlah: data.jumlah,
+        tanggalPinjam: data.tanggalPinjam,
+        jatuhTempo: data.jatuhTempo,
+        status: data.status
+      };
+
+      div.innerHTML = `
+        <strong>${data.nama}</strong><br/>
+        Jumlah: Rp ${data.jumlah.toLocaleString()}<br/>
+        Pinjam: ${data.tanggalPinjam}<br/>
+        Jatuh Tempo: ${data.jatuhTempo}<br/>
+        Status: ${data.status}<br/>
+        <div class="tombol-aksi">
+          <button class="icon-btn edit-btn" title="Edit">
+            <i class="fas fa-pen"></i>
+          </button>
+          ${data.status === 'belum lunas' ? `
+            <button class="icon-btn" onclick='tandaiLunas("${doc.id}", ${data.jumlah})' title="Lunasi">
+              <i class="fas fa-check-circle"></i>
+            </button>
+          ` : ''}
+          <button class="icon-btn" onclick='hapusHutang("${doc.id}")' title="Hapus">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+      `;
+
+      div.querySelector(".edit-btn").addEventListener("click", () => {
+        bukaModal(editData);
+      });
+
+      container.appendChild(div);
+    });
+  } catch (e) {
+    console.error("Gagal ambil data hutang", e);
+    showAlert("Gagal ambil data.");
+  } finally {
+    hideSpinner();
+  }
+}
+
+function gantiTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+  if (tab === 'belum') {
+    document.querySelector('.tab-btn:nth-child(1)').classList.add('active');
+  } else {
+    document.querySelector('.tab-btn:nth-child(2)').classList.add('active');
+  }
+  tampilkanHutang(tab);
+}
+
+async function hitungTotalHutang() {
+  const user = auth.currentUser;
+  if (!user) return;
+
+  try {
+    const snapshot = await db.collection("hutang")
+      .where("uid", "==", user.uid)
+      .where("status", "==", "belum lunas")
+      .get();
+
+    let total = 0;
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      total += Number(data.jumlah) || 0;
+    });
+
+    document.getElementById("totalHutang").innerText = `Rp ${total.toLocaleString()}`;
+  } catch (e) {
+    console.error("Gagal hitung total hutang", e);
+  }
+}
+
+async function tandaiLunas(id, jumlah) {
+const yakin = await globalConfirm("Tandai hutang ini sebagai lunas?");
+if (yakin) {
+    try {
+      await db.collection("hutang").doc(id).update({
+        status: "lunas"
+      });
+
+      // Tambahkan data ke koleksi pemasukan
+      const user = auth.currentUser;
+      await db.collection("pemasukan").add({
+        uid: user.uid,
+        jumlah: jumlah,
+        tanggal: new Date().toISOString()
+      });
+
+      tampilkanHutang();
+      hitungTotalHutang();
+      hitungTotalPemasukan();
+    } catch (e) {
+      console.error("Gagal tandai lunas", e);
+      showAlert("Gagal memperbarui status hutang.");
+    }
+  }
+}
+
+async function hitungTotalPemasukan() {
+  const user = auth.currentUser;
+  if (!user) return;
+
+  try {
+    const snapshot = await db.collection("pemasukan")
+      .where("uid", "==", user.uid)
+      .get();
+
+    let total = 0;
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      total += Number(data.jumlah) || 0;
+    });
+
+    document.getElementById("totalPemasukan").innerText = `Rp ${total.toLocaleString()}`;
+  } catch (e) {
+    console.error("Gagal hitung pemasukan", e);
+  }
+}
+
+// Hapus hutang
+async function hapusHutang(id) {
+const yakin = await globalConfirm("Hapus hutang ini?");
+if (yakin) {
+    await db.collection("hutang").doc(id).delete();
+    tampilkanHutang();
+  }
+}
+
+// Logout
+document.getElementById("logout").addEventListener("click", async () => {
+  try {
+    await auth.signOut();
+    window.location.href = "/";
+  } catch (e) {
+    console.error("Gagal logout", e);
+    showAlert("Gagal logout");
+  }
+});
+
+// Cek login
+auth.onAuthStateChanged(user => {
+  if (user) {
+  console.log("Login sebagai UID:", user.uid);
+    tampilkanHutang();
+	hitungTotalHutang();
+    hitungTotalPemasukan();
+  } else {
+    window.location.href = "/";
+  }
+});
+</script>

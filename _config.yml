@@ -1,0 +1,19 @@
+port: 000
+
+title: Nota Hutang
+description: Aplikasi pencatat dan penagihan hutang berbasis web.
+baseurl: "" # kosongkan kalau di domain utama
+url: "https://notahutang.vercel.app" # ganti dengan URL Pages kamu
+
+sass:
+  sass_dir: assets/sass
+  style: compressed
+
+plugins:
+  - jekyll-seo-tag
+
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor

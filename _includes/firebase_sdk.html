@@ -1,0 +1,22 @@
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.10.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.10.0/firebase-firestore.js"></script>
+
+  <script>
+    // Ganti dengan konfigurasi Firebase kamu
+    const firebaseConfig = {
+  apiKey: "AIzaSyCiT9DTiVun4mKJAenmEHkhZ9jrjNMTEZs",
+  authDomain: "notahutangmu.firebaseapp.com",
+  projectId: "notahutangmu",
+  storageBucket: "notahutangmu.firebasestorage.app",
+  messagingSenderId: "978954750002",
+  appId: "1:978954750002:web:4dd533087767ef08b4d42b",
+  measurementId: "G-54WD1L6R9Q"
+    };
+
+    const app = firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+    const provider = new firebase.auth.GoogleAuthProvider();
+</script>

@@ -1,0 +1,49 @@
+---
+layout: default
+title: Login
+header: Catat & Tagih
+---
+
+<div class="login-box">
+    <h2>{{site.title}}</h2>
+    <p>Masuk untuk mulai mencatat</p>
+    <button onclick="loginGoogle()">Masuk dengan Google</button>
+</div>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const firebaseConfig = {
+		apiKey: "AIzaSyD6Y0iIlreVexPRzyL1us_FFktJBlDyT_o",
+		authDomain: "catat-tagih.firebaseapp.com",
+		projectId: "catat-tagih",
+		storageBucket: "catat-tagih.firebasestorage.app",
+		messagingSenderId: "581930587717",
+		appId: "1:581930587717:web:cb26d2d4a355f39624b52c",
+		measurementId: "G-HB5WZ2LJEW"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const provider = new firebase.auth.GoogleAuthProvider();
+
+    window.loginGoogle = function () {
+      auth.signInWithPopup(provider)
+        .then(result => {
+          window.location.href = "/catat";
+        })
+        .catch(error => {
+          showAlert("Login gagal: " + error.message);
+        });
+    }
+
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        window.location.href = "/catat";
+      }
+    });
+  });
+</script>

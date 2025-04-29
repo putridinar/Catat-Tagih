@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="id">
+{% include head.html %}
+<body>
+
+  <div class="app-container">
+  {% if page.url == '/' %}
+    <header class="app-header">
+      <h1>{{ page.header | default: site.title }}</h1>
+    </header>
+  {% elsif page.url == '/catat' %}
+    <header class="app-header">
+  <div class="btn-grup">
+	  <button class="logout" id="logout">
+	  <i class="fas fa-sign-out-alt"></i></button>
+      <h1>{{ page.header | default: site.title }}</h1>
+	  <button class="modal" onclick="bukaModal()">
+	  <i class="fas fa-plus"></i>
+	  </button>
+  </div>
+    </header>
+  {% endif %}
+
+    <main class="app-main">
+      {{ content }}
+    </main>
+
+    <footer class="app-footer">
+      <p>&copy; {{ site.title }} {{ site.time | date: '%Y' }}</p>
+    </footer>
+  </div>
+{% include spinner.html %}
+{% include alert.html %}
+{% include globalConfirm.html %}
+</body>
+</html>
