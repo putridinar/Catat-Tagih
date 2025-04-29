@@ -32,18 +32,5 @@
 }
 </style>
 <script>
-function showAlert(message) {
-  const alertBox = document.getElementById('customAlert');
-  alertBox.innerText = message;
-  alertBox.className = 'alert-box fade-in';
-  alertBox.style.display = 'block';
-
-  setTimeout(() => {
-    alertBox.classList.remove('fade-in');
-    alertBox.classList.add('fade-out');
-    setTimeout(() => {
-      alertBox.style.display = 'none';
-    }, 200);
-  }, 3000); // auto-hide after 3s
-}
+function showAlert(e){const t=document.getElementById("customAlert");t.innerText=e,t.className="alert-box fade-in",t.style.display="block",setTimeout((()=>{t.classList.remove("fade-in"),t.classList.add("fade-out"),setTimeout((()=>{t.style.display="none"}),200)}),3e3)}
 </script>

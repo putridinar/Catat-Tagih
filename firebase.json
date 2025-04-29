@@ -5,14 +5,18 @@
   },
   "hosting": {
     "public": "_site",
+    "cleanUrls": true,
     "ignore": [
       "firebase.json",
       "**/.*",
       "**/node_modules/**"
+    ],
+    "redirects": [
+      {
+        "source": "/catat.html",
+        "destination": "/catat",
+        "type": 301
+      }
     ]
-  },
-  "remoteconfig": {
-    "template": "remoteconfig.template.json"
-  },
-  "extensions": {}
+  }
 }

@@ -15,35 +15,5 @@ header: Catat & Tagih
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 
 <script>
-  document.addEventListener("DOMContentLoaded", function () {
-    const firebaseConfig = {
-		apiKey: "AIzaSyD6Y0iIlreVexPRzyL1us_FFktJBlDyT_o",
-		authDomain: "catat-tagih.firebaseapp.com",
-		projectId: "catat-tagih",
-		storageBucket: "catat-tagih.firebasestorage.app",
-		messagingSenderId: "581930587717",
-		appId: "1:581930587717:web:cb26d2d4a355f39624b52c",
-		measurementId: "G-HB5WZ2LJEW"
-    };
-
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const provider = new firebase.auth.GoogleAuthProvider();
-
-    window.loginGoogle = function () {
-      auth.signInWithPopup(provider)
-        .then(result => {
-          window.location.href = "/catat";
-        })
-        .catch(error => {
-          showAlert("Login gagal: " + error.message);
-        });
-    }
-
-    auth.onAuthStateChanged(user => {
-      if (user) {
-        window.location.href = "/catat";
-      }
-    });
-  });
+document.addEventListener("DOMContentLoaded",(function(){firebase.initializeApp({apiKey:"AIzaSyD6Y0iIlreVexPRzyL1us_FFktJBlDyT_o",authDomain:"catat-tagih.firebaseapp.com",projectId:"catat-tagih",storageBucket:"catat-tagih.firebasestorage.app",messagingSenderId:"581930587717",appId:"1:581930587717:web:cb26d2d4a355f39624b52c",measurementId:"G-HB5WZ2LJEW"});const a=firebase.auth(),e=new firebase.auth.GoogleAuthProvider;window.loginGoogle=function(){a.signInWithPopup(e).then((a=>{window.location.href="/catat"})).catch((a=>{showAlert("Login gagal: "+a.message)}))},a.onAuthStateChanged((a=>{a&&(window.location.href="/catat")}))}));
 </script>

@@ -8,43 +8,5 @@
   </div>
 </div>
 <script>
-function globalConfirm(message) {
-  return new Promise((resolve) => {
-    const overlay = document.getElementById('globalConfirm');
-    const box = overlay.querySelector('.confirm-box');
-    const msg = document.getElementById('confirmMessage');
-    const yesBtn = document.getElementById('confirmYes');
-    const noBtn = document.getElementById('confirmNo');
-
-    msg.textContent = message;
-    overlay.style.display = 'flex';
-    box.classList.remove('fade-out');
-    box.classList.add('fade-in');
-
-    const cleanup = () => {
-      yesBtn.onclick = null;
-      noBtn.onclick = null;
-    };
-
-    yesBtn.onclick = () => {
-      box.classList.remove('fade-in');
-      box.classList.add('fade-out');
-      setTimeout(() => {
-        overlay.style.display = 'none';
-      }, 200);
-      cleanup();
-      resolve(true);
-    };
-
-    noBtn.onclick = () => {
-      box.classList.remove('fade-in');
-      box.classList.add('fade-out');
-      setTimeout(() => {
-        overlay.style.display = 'none';
-      }, 200);
-      cleanup();
-      resolve(false);
-    };
-  });
-}
+function globalConfirm(e){return new Promise((t=>{const n=document.getElementById("globalConfirm"),o=n.querySelector(".confirm-box"),s=document.getElementById("confirmMessage"),l=document.getElementById("confirmYes"),c=document.getElementById("confirmNo");s.textContent=e,n.style.display="flex",o.classList.remove("fade-out"),o.classList.add("fade-in");const i=()=>{l.onclick=null,c.onclick=null};l.onclick=()=>{o.classList.remove("fade-in"),o.classList.add("fade-out"),setTimeout((()=>{n.style.display="none"}),200),i(),t(!0)},c.onclick=()=>{o.classList.remove("fade-in"),o.classList.add("fade-out"),setTimeout((()=>{n.style.display="none"}),200),i(),t(!1)}}))}
 </script>
