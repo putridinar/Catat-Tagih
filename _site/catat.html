@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Catat Hutang</title>
+
+  <!-- Meta & SEO -->
+  <meta name="description" content="Aplikasi pencatat dan penagihan hutang berbasis web.">
+  <!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Catat Hutang | Nota Hutang</title>
+<meta name="generator" content="Jekyll v4.3.4" />
+<meta property="og:title" content="Catat Hutang" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Aplikasi pencatat dan penagihan hutang berbasis web." />
+<meta property="og:description" content="Aplikasi pencatat dan penagihan hutang berbasis web." />
+<link rel="canonical" href="http://localhost/catat" />
+<meta property="og:url" content="http://localhost/catat" />
+<meta property="og:site_name" content="Nota Hutang" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Catat Hutang" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","description":"Aplikasi pencatat dan penagihan hutang berbasis web.","headline":"Catat Hutang","url":"http://localhost/catat"}</script>
+<!-- End Jekyll SEO tag -->
+
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+  <!-- Favicon -->
+  <link rel="icon" href="/assets/favicon.png">
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="/assets/css/main.css">
+</head>
+<body>
+
+  <div class="app-container">
+  
+    <header class="app-header">
+  <div class="btn-grup">
+	  <button class="logout" id="logout">
+	  <i class="fas fa-sign-out-alt"></i></button>
+      <h1>Nota Hutang</h1>
+	  <button class="modal" onclick="bukaModal()">
+	  <i class="fas fa-plus"></i>
+	  </button>
+  </div>
+    </header>
+  
+
+    <main class="app-main">
+      <!-- Tambahkan di <head> -->
+<style>
+  .modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center;
+  }
+  .modal-box {
+    background: #fff; padding: 20px; border-radius: 8px; width: 300px;
+  }
+  .hutang-item { background: rgba(0,55,115,0.7882352941); color: white; border-radius: 10px; border: 1px solid #ccc; padding: 10px; margin: 10px 0;
+  }
+</style>
+
+<!-- HTML konten -->
+<div class="app-container">
+  <h3 style="margin: 0 0 10px;">Catatan Keuangan</h3>
+  <p style="margin: 0 0 0px;">Uang Diluar: <strong><span id="totalHutang">Rp 0</span></strong></p>
+  <p style="margin: 0 0 20px;">Uang Masuk: <strong><span id="totalPemasukan">Rp 0</span></strong></p>
+
+  <h3>List Peminjam</h3>
+<div class="tab-wrapper">
+	<button class="tab active" data-tab="belum lunas" onclick="setTab(this)">Belum Lunas</button>
+	<button class="tab" data-tab="lunas" onclick="setTab(this)">Lunas</button>
+</div>
+
+	<div id="daftarHutang" class="hutang-list"></div>
+</div>
+
+<!-- Modal -->
+<div id="hutangModal" style="display: none;" class="modal-overlay">
+  <div class="modal-box">
+    <h3 id="modalTitle">Tambah Peminjam</h3>
+    <input type="text" id="nama" placeholder="Nama" />
+    <input type="number" id="jumlah" placeholder="Jumlah (Rp)" />
+    <input type="date" id="tanggalPinjam" />
+    <input type="date" id="jatuhTempo" />
+    <input type="text" id="status" style="display:none"/>
+	  <div class="btn-grup">
+		<button onclick="simpanHutang()">Simpan</button>
+		<button onclick="tutupModal()">Batal</button>
+	  </div>
+  </div>
+</div>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+<script>
+const firebaseConfig = {
+    apiKey: "AIzaSyD6Y0iIlreVexPRzyL1us_FFktJBlDyT_o",
+    authDomain: "catat-tagih.firebaseapp.com",
+    projectId: "catat-tagih",
+    storageBucket: "catat-tagih.firebasestorage.app",
+    messagingSenderId: "581930587717",
+    appId: "1:581930587717:web:cb26d2d4a355f39624b52c",
+    measurementId: "G-HB5WZ2LJEW"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const auth = firebase.auth();
+
+let editId = null;
+let tabAktif = "belum lunas";
+
+function setTab(buttonEl) {
+  tabAktif = buttonEl.dataset.tab;
+  tampilkanHutang();
+  document.querySelectorAll(".tab").forEach(btn => btn.classList.remove("active"));
+  buttonEl.classList.add("active");
+}
+
+// Modal functions
+function bukaModal(data = null) {
+  const modal = document.getElementById("hutangModal");
+  modal.style.display = "flex";
+  document.getElementById("modalTitle").innerText = data ? "Edit Peminjam" : "Tambah Peminjam";
+  const box = modal.querySelector(".modal-box");
+  box.classList.remove('fade-out');
+  box.classList.add('fade-in');
+
+  if (data) {
+    editId = data.id;
+    document.getElementById("nama").value = data.nama;
+    document.getElementById("jumlah").value = data.jumlah;
+    document.getElementById("tanggalPinjam").value = data.tanggalPinjam;
+    document.getElementById("jatuhTempo").value = data.jatuhTempo;
+    document.getElementById("status").value = "belum lunas";
+  } else {
+    editId = null;
+    document.getElementById("nama").value = "";
+    document.getElementById("jumlah").value = "";
+    document.getElementById("tanggalPinjam").value = "";
+    document.getElementById("jatuhTempo").value = "";
+    document.getElementById("status").value = "belum lunas";
+  }
+}
+
+function tutupModal() {
+  const modal = document.getElementById("hutangModal");
+  const box = modal.querySelector(".modal-box");
+  box.classList.remove('fade-in');
+  box.classList.add('fade-out');
+  setTimeout(() => {
+    modal.style.display = "none";
+  }, 200);
+}
+
+// Simpan data
+async function simpanHutang() {
+  const nama = document.getElementById("nama").value.trim();
+  const jumlah = parseInt(document.getElementById("jumlah").value);
+  const tanggalPinjam = document.getElementById("tanggalPinjam").value;
+  const jatuhTempo = document.getElementById("jatuhTempo").value;
+  const status = document.getElementById("status").value;
+
+  const user = auth.currentUser;
+  if (!user) return showAlert("Pengguna belum login");
+
+  if (!nama || isNaN(jumlah) || !tanggalPinjam || !jatuhTempo) {
+    return showAlert("Isi semua kolom dengan benar.");
+  }
+
+  try {
+    if (editId) {
+      await db.collection("hutang").doc(editId).update({
+        nama, jumlah, tanggalPinjam, jatuhTempo, status
+      });
+	  tampilkanHutang(); // refresh daftar hutang
+	  
+    } else {
+      await db.collection("hutang").add({
+        uid: user.uid,
+        nama,
+        jumlah,
+        tanggalPinjam,
+        jatuhTempo,
+        status: "belum lunas"
+      });
+    }
+
+    tampilkanHutang();
+	
+    tutupModal();
+    console.log("Sukses simpan hutang");
+    showAlert("Catatan Tersimpan di Database.");
+  } catch (e) {
+    console.error("Gagal simpan hutang", e);
+    showAlert("Terjadi kesalahan.");
+  }
+}
+
+// Tampilkan daftar
+async function tampilkanHutang() {
+  const container = document.getElementById('daftarHutang');
+  container.innerHTML = '';
+
+  const user = auth.currentUser;
+  if (!user) return;
+
+  showSpinner();
+  try {
+    const snapshot = await db.collection('hutang')
+      .where('uid', '==', user.uid)
+      .where('status', '==', tabAktif)
+      .orderBy('jatuhTempo')
+      .get();
+
+    if (snapshot.empty) {
+      container.innerHTML = `<p>Tidak ada hutang ${tabAktif}.</p>`;
+    }
+
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      const div = document.createElement('div');
+      div.className = 'hutang-item';
+
+      div.innerHTML = `
+        <strong>${data.nama}</strong><br/>
+        Jumlah: Rp ${data.jumlah.toLocaleString()}<br/>
+        Status: <strong>${data.status}</strong><br/>
+        Pinjam: ${data.tanggalPinjam}<br/>
+        Jatuh Tempo: ${data.jatuhTempo}<br/>
+        ${data.status === 'lunas' && data.tanggalLunas ? `Lunas: ${data.tanggalLunas}<br/>` : ''}
+        <div class="tombol-aksi">
+          <button class="icon-btn edit-btn" title="Edit">
+            <i class="fas fa-pen"></i>
+          </button>
+          ${data.status === "belum lunas" ? `
+            <button class="icon-btn" onclick='tandaiLunas("${doc.id}", ${data.jumlah})' title="Lunasi">
+              <i class="fas fa-check-circle"></i>
+            </button>` : ''}
+          <button class="icon-btn" onclick='hapusHutang("${doc.id}")' title="Hapus">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+      `;
+
+      div.querySelector(".edit-btn").addEventListener("click", () => {
+        bukaModal({
+          id: doc.id,
+          nama: data.nama,
+          jumlah: data.jumlah,
+          tanggalPinjam: data.tanggalPinjam,
+          jatuhTempo: data.jatuhTempo
+        });
+      });
+
+      container.appendChild(div);
+    });
+
+  } catch (e) {
+    console.error("Gagal ambil data hutang", e);
+    showAlert("Gagal ambil data.");
+  } finally {
+    hideSpinner();
+  }
+}
+
+async function hitungTotalHutang() {
+  const user = auth.currentUser;
+  if (!user) return;
+
+  try {
+    const snapshot = await db.collection("hutang")
+      .where("uid", "==", user.uid)
+      .where("status", "==", "belum lunas")
+      .get();
+
+    let total = 0;
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      total += Number(data.jumlah) || 0;
+    });
+
+    document.getElementById("totalHutang").innerText = `Rp ${total.toLocaleString()}`;
+  } catch (e) {
+    console.error("Gagal hitung total hutang", e);
+  }
+}
+
+async function tandaiLunas(id, jumlah) {
+  if (!await globalConfirm("Tandai hutang ini sebagai lunas?")) return;
+
+  const tanggalPelunasan = new Date().toISOString().split('T')[0]; // format: YYYY-MM-DD
+
+  try {
+    await db.collection("hutang").doc(id).update({
+      status: "lunas",
+      tanggalPelunasan: tanggalPelunasan
+    });
+
+    // Update total pemasukan dan tampilkan ulang daftar
+    await tambahPemasukan(jumlah);
+    tampilkanHutang();
+  } catch (e) {
+    console.error("Gagal tandai lunas", e);
+    showAlert("Gagal menandai lunas.");
+  }
+}
+
+async function tambahPemasukan(jumlah) {
+  const user = auth.currentUser;
+  if (!user) return;
+
+  try {
+    const pemasukanRef = db.collection("pemasukan").doc(user.uid);
+    const doc = await pemasukanRef.get();
+
+    if (doc.exists) {
+      await pemasukanRef.update({
+        total: firebase.firestore.FieldValue.increment(jumlah)
+      });
+    } else {
+      await pemasukanRef.set({ total: jumlah });
+    }
+  } catch (e) {
+    console.error("Gagal tambah pemasukan", e);
+    showAlert("Gagal mencatat pemasukan.");
+  }
+}
+
+async function hitungTotalPemasukan() {
+  const user = auth.currentUser;
+  if (!user) return;
+
+  try {
+    const snapshot = await db.collection("pemasukan")
+      .where("uid", "==", user.uid)
+      .get();
+
+    let total = 0;
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      total += Number(data.jumlah) || 0;
+    });
+
+    document.getElementById("totalPemasukan").innerText = `Rp ${total.toLocaleString()}`;
+  } catch (e) {
+    console.error("Gagal hitung pemasukan", e);
+  }
+}
+
+// Hapus hutang
+async function hapusHutang(id) {
+const yakin = await globalConfirm("Hapus hutang ini?");
+if (yakin) {
+    await db.collection("hutang").doc(id).delete();
+    tampilkanHutang();
+  }
+}
+
+// Logout
+document.getElementById("logout").addEventListener("click", async () => {
+  try {
+    await auth.signOut();
+    window.location.href = "/";
+  } catch (e) {
+    console.error("Gagal logout", e);
+    showAlert("Gagal logout");
+  }
+});
+
+// Cek login
+auth.onAuthStateChanged(user => {
+  if (user) {
+  console.log("Login sebagai UID:", user.uid);
+    tampilkanHutang();
+	hitungTotalHutang();
+    hitungTotalPemasukan();
+  } else {
+    window.location.href = "/";
+  }
+});
+</script>
+    </main>
+
+    <footer class="app-footer">
+      <p>&copy; Nota Hutang 2025</p>
+    </footer>
+  </div>
+<div id="loadingSpinner" class="spinner-overlay" style="display: none;">
+  <div class="spinner"></div>
+</div>
+<style>
+.spinner-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #ccc;
+  border-top-color: #3498db;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+</style>
+<script>
+function showSpinner() {
+  document.getElementById('loadingSpinner').style.display = 'flex';
+}
+
+function hideSpinner() {
+  document.getElementById('loadingSpinner').style.display = 'none';
+}
+</script>
+<div id="customAlert" style="display:none;" class="alert-box"></div>
+<style>
+.alert-box {
+    position: absolute;
+    top: 20px;
+    width: -webkit-fill-available;
+    max-width: 550px;
+    background: #323232;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 8px;
+    z-index: 999;
+	opacity: 0;
+}
+@media (max-width: 480px) {
+  .alert-box {
+	max-width: 350px;
+    font-size: 15px;
+  }
+
+.alert-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+	z-index: 1000;
+}
+</style>
+<script>
+function showAlert(e){const t=document.getElementById("customAlert");t.innerText=e,t.className="alert-box fade-in",t.style.display="block",setTimeout((()=>{t.classList.remove("fade-in"),t.classList.add("fade-out"),setTimeout((()=>{t.style.display="none"}),200)}),3e3)}
+</script>
+<div id="globalConfirm" class="modal-overlay" style="display: none;">
+  <div class="confirm-box">
+    <p id="confirmMessage"></p>
+    <div class="confirm-buttons">
+      <button id="confirmYes">Ya</button>
+      <button id="confirmNo">Batal</button>
+    </div>
+  </div>
+</div>
+<script>
+function globalConfirm(e){return new Promise((t=>{const n=document.getElementById("globalConfirm"),o=n.querySelector(".confirm-box"),s=document.getElementById("confirmMessage"),l=document.getElementById("confirmYes"),c=document.getElementById("confirmNo");s.textContent=e,n.style.display="flex",o.classList.remove("fade-out"),o.classList.add("fade-in");const i=()=>{l.onclick=null,c.onclick=null};l.onclick=()=>{o.classList.remove("fade-in"),o.classList.add("fade-out"),setTimeout((()=>{n.style.display="none"}),200),i(),t(!0)},c.onclick=()=>{o.classList.remove("fade-in"),o.classList.add("fade-out"),setTimeout((()=>{n.style.display="none"}),200),i(),t(!1)}}))}
+</script>
+</body>
+</html>
